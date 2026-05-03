@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Memory Agent",
+  "version": "0.9.0",
+  "description": "A browsing-memory companion. Tell it a goal in plain language and it scans your history, surfaces patterns, and grows a personal knowledge base — all local, powered by free LLM APIs.",
+  "permissions": ["activeTab", "scripting", "storage", "tabs", "sidePanel", "history"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Memory Agent"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  }
+}

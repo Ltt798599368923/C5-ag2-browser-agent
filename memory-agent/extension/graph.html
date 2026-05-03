@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Memory Agent — Graph</title>
+  <link rel="stylesheet" href="graph.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <span class="title">Memory Graph</span>
+      <span id="counts" class="muted"></span>
+    </div>
+    <div class="controls">
+      <input id="filter" placeholder="Filter by title, domain, topic…">
+      <select id="link-mode" title="What links nodes">
+        <option value="topic">Link by shared topic</option>
+        <option value="domain">Link by shared domain</option>
+      </select>
+      <button id="fit-screen" class="ghost" title="Fit graph to screen">Fit</button>
+      <button id="reset-view" class="ghost" title="Reset view (1x, centered)">Reset</button>
+      <button id="export-vault" class="primary">Export to Obsidian vault…</button>
+      <button id="export-file" class="ghost">Download .md</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="canvas-wrap">
+      <svg id="graph"></svg>
+      <div id="legend" class="legend"></div>
+      <div id="empty" class="empty hidden">
+        <p>Your knowledge base is empty. Save some pages from the side panel and they'll show up here.</p>
+      </div>
+    </div>
+
+    <aside id="details" class="details hidden">
+      <button id="close-details" class="icon-btn" title="Close">×</button>
+      <h3 id="d-title"></h3>
+      <small id="d-meta"></small>
+      <div id="d-topics" class="topics"></div>
+      <pre id="d-summary"></pre>
+      <div id="d-note-block" class="hidden">
+        <h4>My note</h4>
+        <p id="d-note"></p>
+      </div>
+      <a id="d-link" target="_blank" class="primary-link">Open page →</a>
+    </aside>
+  </main>
+
+  <div id="status" class="status hidden"></div>
+
+  <script type="module" src="graph.js"></script>
+</body>
+</html>

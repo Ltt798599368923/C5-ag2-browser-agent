@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Memory Agent</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="appbar">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <span class="title">Memory</span>
+    </div>
+    <div class="appbar-actions">
+      <button id="tab-chat" class="appbar-tab active" data-view="chat" title="Chat">Chat</button>
+      <button id="tab-lib" class="appbar-tab" data-view="lib" title="Review your saved pages">Review</button>
+      <button id="open-settings" class="icon-btn" title="Settings">⚙</button>
+    </div>
+  </div>
+
+  <section id="view-chat" class="view active">
+    <div id="chat" class="chat">
+      <div class="empty-state" id="empty-state">
+        <div class="greeting-row" id="greeting-row">
+          <!-- mascot + speech bubble injected by JS -->
+        </div>
+        <div class="suggestions">
+          <button class="suggest highlight" id="empty-import-btn" data-action="import">📥 Pull in my last 30 days of browser history</button>
+          <button class="suggest" data-msg="I want to improve my tech skills">I want to improve my tech skills</button>
+          <button class="suggest" data-msg="What have I been reading lately?">What have I been reading lately?</button>
+          <button class="suggest" data-msg="Build a knowledge base from my recent reading">Build a knowledge base from my reading</button>
+          <button class="suggest" data-msg="Save this page to memory">Save this page</button>
+        </div>
+      </div>
+    </div>
+    <form id="composer">
+      <button type="button" id="quick-save" class="icon-btn" title="Save current page to memory">＋</button>
+      <textarea id="ask-input" placeholder="Ask anything…" rows="1"></textarea>
+      <button type="submit" id="send-btn" class="primary" title="Send (⌘/Ctrl+Enter)">Send</button>
+    </form>
+  </section>
+
+  <section id="view-lib" class="view">
+    <input id="lib-search" placeholder="Filter your memory…">
+    <div class="row lib-actions-row">
+      <small id="lib-count" class="muted"></small>
+      <div class="lib-buttons">
+        <button id="lib-import" class="ghost small">📥 Import history</button>
+        <button id="open-graph" class="ghost small">Graph view ↗</button>
+        <button id="export-vault" class="primary small">Export to Obsidian</button>
+        <button id="download-md" class="ghost small">Download .md</button>
+        <button id="lib-clear" class="ghost danger small">Clear all</button>
+      </div>
+    </div>
+    <p id="export-status" class="muted" style="font-size: 11.5px; margin: 0; min-height: 14px;"></p>
+    <ul id="lib-list"></ul>
+  </section>
+
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <header>
+        <h3>Settings</h3>
+        <button id="close-settings" class="icon-btn">×</button>
+      </header>
+
+      <label>Provider
+        <select id="provider"></select>
+      </label>
+
+      <label>API key
+        <input type="password" id="apiKey" placeholder="paste your key">
+      </label>
+      <p class="hint"><a id="keys-link" href="#" target="_blank">Get a free API key</a></p>
+
+      <label>Model (optional)
+        <input type="text" id="model" placeholder="leave blank for default" list="model-options">
+        <datalist id="model-options"></datalist>
+      </label>
+
+      <label class="check">
+        <input type="checkbox" id="autoSummarize">
+        Auto-save pages I dwell on
+      </label>
+
+      <button id="save-settings" class="primary">Save</button>
+      <p id="settings-status" class="status"></p>
+    </div>
+  </div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
