@@ -2,7 +2,7 @@ I made two agents. One for daily personal use, this browser living agent;
 <img width="1431" height="882" alt="image" src="https://github.com/user-attachments/assets/00f5a593-3062-499c-9d70-2bbfc96f5061" />
 
 
-Another enterprise facing agent for ad compain analyzing at this repo:
+Another enterprise facing agent for ads(marketing) analysis at this repo:
 
 https://github.com/amlworks/ag2-ad-god/blob/main
 
