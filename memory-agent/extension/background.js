@@ -54,7 +54,8 @@ const ENV_KEY_MAP = {
   gemini: "GEMINI_API_KEY",
   nvidia: "NVIDIA_API_KEY",
   openrouter: "OPENROUTER_API_KEY",
-  cerebras: "CEREBRAS_API_KEY"
+  cerebras: "CEREBRAS_API_KEY",
+  tavily: "TAVILY_API_KEY"  // 新增：网页搜索API
 };
 
 async function seedFromEnv() {
@@ -96,6 +97,11 @@ async function seedFromEnv() {
     const want = ["true", "1", "yes", "on"].includes(env.AUTO_SUMMARIZE.toLowerCase());
     if (cur.autoSummarize !== want) updates.autoSummarize = want;
   }
+  
+  // 新增：Tavily API Key
+  if (env.TAVILY_API_KEY && env.TAVILY_API_KEY.length > 0 && cur.tavilyApiKey !== env.TAVILY_API_KEY) {
+    updates.tavilyApiKey = env.TAVILY_API_KEY;
+  }
 
   if (Object.keys(updates).length) {
     await chrome.storage.local.set(updates);
@@ -108,7 +114,7 @@ seedFromEnv().catch(e => console.warn("[memory-agent] env seed:", e?.message));
 
 async function getSettings() {
   const s = await chrome.storage.local.get([
-    "provider", "apiKey", "apiKeys", "model", "autoSummarize", "minDwellMs", "maxAutoPerHour"
+    "provider", "apiKey", "apiKeys", "model", "autoSummarize", "minDwellMs", "maxAutoPerHour", "tavilyApiKey"
   ]);
   const provider = s.provider || "groq";
   const apiKeys = { ...(s.apiKeys || {}) };
@@ -121,7 +127,8 @@ async function getSettings() {
     model: s.model || "",
     autoSummarize: s.autoSummarize ?? true,
     minDwellMs: s.minDwellMs ?? 30000,
-    maxAutoPerHour: s.maxAutoPerHour ?? 30
+    maxAutoPerHour: s.maxAutoPerHour ?? 30,
+    tavilyApiKey: s.tavilyApiKey || ""  // 新增：Tavily API Key
   };
 }
 
@@ -201,6 +208,25 @@ Output exactly:
 - A final line "Topics: tag1, tag2, tag3" (3-7 short lowercase tags useful for retrieval)
 Do not editorialize. Do not invent details that are not in the source.`;
 
+// ========== 新增：总结Agent系统提示 ==========
+const SYS_SUMMARIZER = `You are a deep-thinking assistant that provides multi-dimensional analysis of web content.
+
+When analyzing a page, provide a structured analysis in this EXACT format:
+
+## Key Insights
+(3-5 bullet points of the most important discoveries or insights from the content)
+
+## Actionable Takeaways
+(2-4 concrete, specific actions the reader can take based on this content)
+
+## Related Concepts
+(3-5 related topics or concepts that would help deepen understanding)
+
+## Why This Matters
+(1-2 sentences explaining the broader significance or context)
+
+Be insightful, practical, and focus on value the reader can extract. Don't just summarize - elevate the content with analysis.`;
+
 async function summarizeExtracted(extracted) {
   const settings = await getSettings();
   const text = extracted.text.slice(0, MAX_TEXT_CHARS);
@@ -240,8 +266,46 @@ Summary:`;
     kind: extracted.kind || "page",
     ts: Date.now()
   };
+  
+  // ========== 新增：调用总结Agent进行多维度分析 ==========
+  try {
+    const enhancedAnalysis = await summarizerAgent(extracted, text_out);
+    if (enhancedAnalysis) {
+      entry.enhancedAnalysis = enhancedAnalysis;
+    }
+  } catch (e) {
+    console.warn("[memory-agent] summarizer skipped:", e.message);
+  }
+  
   await savePage(entry);
   return entry;
+}
+
+// ========== 新增：总结Agent函数 ==========
+async function summarizerAgent(extracted, basicSummary) {
+  const settings = await getSettings();
+  if (!settings.model) return null;
+  
+  const userMsg = `URL: ${extracted.url}
+Title: ${extracted.title}
+${extracted.kind === "youtube" ? "Source: YouTube transcript" : ""}
+
+Basic Summary:
+${basicSummary}
+
+Please provide your multi-dimensional analysis:`;
+
+  const out = await chat({
+    provider: settings.provider,
+    apiKey: settings.apiKey,
+    model: settings.model,
+    messages: [
+      { role: "system", content: SYS_SUMMARIZER },
+      { role: "user", content: userMsg }
+    ]
+  });
+
+  return out.content?.trim() || null;
 }
 
 async function summarizeTab(tabId) {
@@ -328,8 +392,9 @@ You have tools that read the user's ACTUAL data:
 - search_knowledge(query): pages they've EXPLICITLY saved (with summaries + their notes)
 - list_knowledge(limit): saved pages, most recent first
 - compare_history_to_goal(goal, keywords, days): cross-references history + saved knowledge against a goal — best for "I want to learn X" prompts
+- web_search(query, num_results): search the web for current information — use when local knowledge is insufficient or they need latest news/research
 
-USE TOOLS PROACTIVELY. When the user expresses a learning goal, call compare_history_to_goal first — it gives you both what they've been browsing AND what they've saved, plus highlights pages they read but didn't save. When they ask reflective questions about their reading, call recent_history or search_knowledge.
+USE TOOLS PROACTIVELY. When the user expresses a learning goal, call compare_history_to_goal first — it gives you both what they've been browsing AND what they've saved, plus highlights pages they read but didn't save. When they ask reflective questions about their reading, call recent_history or search_knowledge. When their questions require up-to-date or external information, call web_search to supplement.
 
 When responding, BE SPECIFIC. Markdown is rendered, so use [Title](URL) links to actual pages they visited. Notice patterns ("you've been on substack.com a lot, especially [these pieces]"). Compare what they browsed vs what they saved — gaps are interesting.
 

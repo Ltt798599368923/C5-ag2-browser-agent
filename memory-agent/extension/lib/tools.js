@@ -1,6 +1,7 @@
 import { search, listPages } from "./storage.js";
 
 export const TOOL_SPECS = [
+  // ========== 原有工具 ==========
   {
     type: "function",
     function: {
@@ -16,6 +17,28 @@ export const TOOL_SPECS = [
           days: {
             type: "integer",
             description: "How many days back to look. Default 60, max 365."
+          }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  // ========== 新增：网页搜索工具 ==========
+  {
+    type: "function",
+    function: {
+      name: "web_search",
+      description: "Search the web for current information when local knowledge base is insufficient. Returns top search results with titles, URLs, and brief summaries. Use this when: 1) the user's question requires up-to-date information not in their browsing history, 2) they ask about topics not covered in their saved pages, 3) they want to verify or supplement what they saved with latest news/research.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query - be specific and concise for best results."
+          },
+          num_results: {
+            type: "integer",
+            description: "Number of results to return (default 5, max 10)."
           }
         },
         required: ["query"]
@@ -99,8 +122,53 @@ function tld(url) {
   }
 }
 
+// ========== 新增：获取 Tavily API Key ==========
+async function getTavilyKey() {
+  const result = await chrome.storage.local.get(["tavilyApiKey"]);
+  return result.tavilyApiKey || null;
+}
+
 export async function executeTool(name, args = {}) {
   switch (name) {
+    // ========== 新增：网页搜索工具实现 ==========
+    case "web_search": {
+      const tavilyKey = await getTavilyKey();
+      if (!tavilyKey) {
+        throw new Error("Web search not configured. Please set TAVILY_API_KEY in Settings.");
+      }
+      const numResults = Math.min(Math.max(args.num_results || 5, 1), 10);
+      const response = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          api_key: tavilyKey,
+          query: args.query,
+          search_depth: "basic",
+          max_results: numResults,
+          include_answer: true,
+          include_raw_content: false
+        })
+      });
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Tavily search failed: ${response.status} - ${err}`);
+      }
+      const data = await response.json();
+      return {
+        query: data.query,
+        answer: data.answer || null,
+        results: (data.results || []).map(r => ({
+          title: r.title,
+          url: r.url,
+          snippet: r.content || "",
+          score: r.score
+        })),
+        totalResults: data.results?.length || 0
+      };
+    }
+
     case "scan_history": {
       const days = Math.min(Math.max(args.days || 60, 1), 365);
       const startTime = Date.now() - days * 86400000;
